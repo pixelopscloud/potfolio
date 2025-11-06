@@ -37,6 +37,16 @@ pipeline {
                 }
             }
         }
+
+        stage('Deploy Container') {
+            steps {
+                sh '''
+                    docker stop my-app || true
+                    docker rm my-app || true
+                    docker run -d -p 8080:80 --name my-app pixelopscloud/abd-app:latest
+                '''
+            }
+        }
     }
     
     post {
@@ -45,3 +55,4 @@ pipeline {
         }
     }
 }
+
