@@ -40,7 +40,7 @@ pipeline {
                 sh '''
                     docker stop welcome-java || true
                     docker rm welcome-java || true
-                    docker run -d -p 8080:80 --name welcome-java pixelopscloud/gitops:latest
+                    docker run -d -p 8081:80 --name welcome-java pixelopscloud/gitops:latest
                 '''
             }
         }
