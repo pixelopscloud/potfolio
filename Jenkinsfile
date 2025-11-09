@@ -122,14 +122,43 @@ pipeline {
                     echo '🏥 Performing health check...'
                     sh '''
                         echo "Waiting for services to be ready..."
-                        sleep 20
-                        
-                        echo "✓ Checking Frontend (Port 3000)..."
-                        curl -f http://localhost:3000 || exit 1
-                        
-                        echo "✓ Checking Backend (Port 3500)..."
-                        curl -f http://localhost:3500 || exit 1
-                        
+                        timeout=120
+                        interval=5
+                        elapsed=0
+
+                        echo "Checking Frontend (Port 3000)..."
+                        while [ $elapsed -lt $timeout ]; do
+                          if curl -fsS --max-time 5 http://127.0.0.1:3000 >/dev/null 2>&1; then
+                            echo "✅ Frontend is up and responding!"
+                            break
+                          fi
+                          echo "Waiting for frontend... ${elapsed}s"
+                          sleep $interval
+                          elapsed=$((elapsed+interval))
+                        done
+
+                        if [ $elapsed -ge $timeout ]; then
+                          echo "❌ Frontend failed to respond within ${timeout}s"
+                          exit 1
+                        fi
+
+                        echo "Checking Backend (Port 3500)..."
+                        elapsed=0
+                        while [ $elapsed -lt $timeout ]; do
+                          if curl -fsS --max-time 5 http://127.0.0.1:3500 >/dev/null 2>&1; then
+                            echo "✅ Backend is up and responding!"
+                            break
+                          fi
+                          echo "Waiting for backend... ${elapsed}s"
+                          sleep $interval
+                          elapsed=$((elapsed+interval))
+                        done
+
+                        if [ $elapsed -ge $timeout ]; then
+                          echo "❌ Backend failed to respond within ${timeout}s"
+                          exit 1
+                        fi
+
                         echo "✅ All services are healthy!"
                     '''
                 }
@@ -170,3 +199,4 @@ pipeline {
         }
     }
 }
+
