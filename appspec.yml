@@ -1,7 +1,7 @@
 version: 0.0
 os: linux
 files:
-  - source: target/welcome.war
+  - source: ctk-qa1/build-output.zip
     destination: /opt/tomcat/webapps/
 hooks:
   ApplicationStop:
