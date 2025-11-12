@@ -4,11 +4,16 @@ phases:
   install:
     runtime-versions:
       java: corretto11
+  
   build:
     commands:
+      - echo Build started on `date`
       - mvn clean package
+      - echo Build completed on `date`
+
 artifacts:
   files:
     - target/welcome.war
     - appspec.yml
     - scripts/**
+  name: build-output.zip
