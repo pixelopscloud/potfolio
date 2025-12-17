@@ -1,7 +1,11 @@
 # Build stage
-FROM node:18-alpine as build
+FROM node:18-alpine AS build
 
 WORKDIR /app
+
+# Accept build-time variable
+ARG REACT_APP_API_URL
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
 COPY package*.json ./
 RUN npm install
@@ -27,3 +31,4 @@ RUN echo 'server { \
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
+
