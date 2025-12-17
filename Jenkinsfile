@@ -19,8 +19,10 @@ pipeline {
             steps {
                 sh """
                 docker build \
+                -f frontend/Dockerfile \
                 --build-arg REACT_APP_API_URL=${API_URL} \
-                -t ${DOCKERHUB_USER}/${IMAGE_NAME}:latest .
+                -t ${DOCKERHUB_USER}/${IMAGE_NAME}:latest \
+                frontend
                 """
             }
         }
