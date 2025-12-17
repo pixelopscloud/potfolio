@@ -1,22 +1,58 @@
 pipeline {
   agent any
-
+  
   environment {
     DOCKERHUB_USER = "pixelopscloud"
-    FRONTEND_IMAGE = "${DOCKERHUB_USER}/frontend-app:${BUILD_NUMBER}"
-    BACKEND_IMAGE  = "${DOCKERHUB_USER}/backend-app:${BUILD_NUMBER}"
+    FRONTEND_IMAGE = "${DOCKERHUB_USER}/taskmanager-frontend"
+    BACKEND_IMAGE  = "${DOCKERHUB_USER}/taskmanager-backend"
+    VERSION = "${BUILD_NUMBER}"
   }
-
+  
   stages {
-
-    stage('Checkout') {
-      steps { checkout scm }
+    stage('Cleanup Workspace') {
+      steps {
+        cleanWs()
+      }
     }
-
+    
+    stage('Checkout Code') {
+      steps {
+        git branch: 'main',
+            credentialsId: 'github-credentials',
+            url: 'https://github.com/pixelopscloud/potfolio.git'
+      }
+    }
+    
+    stage('Build Backend Image') {
+      steps {
+        script {
+          dir('backend') {
+            sh """
+              docker build -t ${BACKEND_IMAGE}:${VERSION} .
+              docker tag ${BACKEND_IMAGE}:${VERSION} ${BACKEND_IMAGE}:latest
+            """
+          }
+        }
+      }
+    }
+    
+    stage('Build Frontend Image') {
+      steps {
+        script {
+          dir('frontend') {
+            sh """
+              docker build -t ${FRONTEND_IMAGE}:${VERSION} .
+              docker tag ${FRONTEND_IMAGE}:${VERSION} ${FRONTEND_IMAGE}:latest
+            """
+          }
+        }
+      }
+    }
+    
     stage('Docker Login') {
       steps {
         withCredentials([usernamePassword(
-          credentialsId: 'DOCKERHUB-ID',
+          credentialsId: 'dockerhub-credentials',
           usernameVariable: 'DOCKER_USER',
           passwordVariable: 'DOCKER_PASS'
         )]) {
@@ -24,31 +60,47 @@ pipeline {
         }
       }
     }
-
-    stage('Build Frontend') {
+    
+    stage('Push Images to Docker Hub') {
       steps {
-        dir('frontend') {
-          sh 'docker build -t $FRONTEND_IMAGE .'
-        }
+        sh """
+          docker push ${BACKEND_IMAGE}:${VERSION}
+          docker push ${BACKEND_IMAGE}:latest
+          docker push ${FRONTEND_IMAGE}:${VERSION}
+          docker push ${FRONTEND_IMAGE}:latest
+        """
       }
     }
-
-    stage('Build Backend') {
+    
+    stage('Cleanup Local Images') {
       steps {
-        dir('backend') {
-          sh 'docker build -t $BACKEND_IMAGE .'
-        }
-      }
-    }
-
-    stage('Push Images') {
-      steps {
-        sh '''
-          docker push $FRONTEND_IMAGE
-          docker push $BACKEND_IMAGE
-        '''
+        sh """
+          docker rmi ${BACKEND_IMAGE}:${VERSION} || true
+          docker rmi ${BACKEND_IMAGE}:latest || true
+          docker rmi ${FRONTEND_IMAGE}:${VERSION} || true
+          docker rmi ${FRONTEND_IMAGE}:latest || true
+        """
       }
     }
   }
+  
+  post {
+    always {
+      sh 'docker logout'
+    }
+    success {
+      echo '✅ ======================================'
+      echo '✅ Pipeline Completed Successfully!'
+      echo '✅ ======================================'
+      echo "Backend Image: ${BACKEND_IMAGE}:${VERSION}"
+      echo "Frontend Image: ${FRONTEND_IMAGE}:${VERSION}"
+      echo '✅ Images pushed to Docker Hub'
+    }
+    failure {
+      echo '❌ ======================================'
+      echo '❌ Pipeline Failed!'
+      echo '❌ Check console output for errors'
+      echo '❌ ======================================'
+    }
+  }
 }
-
